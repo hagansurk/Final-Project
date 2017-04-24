@@ -106,7 +106,7 @@ cur.execute('DROP TABLE IF EXISTS Parks')
 
 table_spec = 'CREATE TABLE IF NOT EXISTS '
 table_spec += 'Parks (park_name TEXT PRIMARY KEY, '
-table_spec += 'description TEXT, sites_and_monuments TEXT, state_name TEXT NOT NULL, FOREIGN KEY (state_name) REFERENCES States(state_name) ON UPDATE SET NULL)'
+table_spec += 'description TEXT, type_of_park TEXT, park_location TEXT, state_name TEXT NOT NULL, FOREIGN KEY (state_name) REFERENCES States(state_name) ON UPDATE SET NULL)'
 cur.execute(table_spec)
 
 
@@ -129,29 +129,15 @@ cur.execute(table_spec2)
 # this can either be in the form of a class definition or just load just into one database file
 # 	TIP: make sure to sort through the data, extract the text from the html tags
 # 		Use BeautifulSoup to parse through the data 
-# state_name= []
-# park_count = []
-# park_visitors = []
-# avg_temp = [] 
-#for elem in national_parks_data:
-# 	soup = BeautifulSoup(elem, 'html.parser')
-# 	state = soup.find("h1",  {"class": "page-title"})
-
-# 	state_name.append(state.string)
-# 	print(state_name)
-# 	park_numbers = soup.find("ul", {'class':"state_numbers"}) #need to pinpoint what exactly I need to extract is
-# 	count = park_numbers.find_all("strong")
-# 	park_count.append(count[0].string)
-# 	park_visitors.append(count[1].string)
-# 	print(park_visitors)
-# 	print(park_count)
-
-# state_info = zip(state_name, park_count, park_visitors, avg_temp)
 
 class NationalPark():
 	state_name= []
 	park_count = []
 	park_visitors = [] 
+	park_name = [] # tag h3
+	park_location = [] # tag h4
+	park_type = [] # tag h2
+	park_description = [] # tag p
 	def __init__(self, soup):
 		self.soup = soup
 	def extract_html_data(self):
@@ -166,35 +152,59 @@ class NationalPark():
 		#print(self.park_count)
 		return [self.state_name, self.park_count, self.park_visitors]
 	def sort_html_data(self):
-		try:
-			self.state_info = [self.state_name, self.park_count, self.park_visitors]
-			return self.state_info 
-		except:
-			pass
+		self.park_info = self.soup.find("ul", {"id" : "list_parks"})
+		self.park = self.park_info.find_all("h3")
+		for elem in self.park:
+			self.park_name.append(elem.string)
+		self.type = self.park_info.find_all("h2")
+		for elem in self.type:
+			self.park_type.append(elem.string)
+		self.description = self.park_info.find_all("p")
+		for elem in self.description:
+			self.park_description.append(elem.string)
+		self.location = self.park_info.find_all("h4")
+		for elem in self.location:
+			self.park_location.append(elem.string)
+		# print(self.park_type)
+		# print(self.park_name)
+		# print(self.park_description)
+		# print(self.park_location)
+		return [self.park_name, self.park_type, self.park_description, self.park_location]
+		
+
+
 def NPS_extraction(national_parks_data):
 	state_info_list = []
 	for elem in national_parks_data:
 		soup = BeautifulSoup(elem, "html.parser")
 		NPS = NationalPark(soup)
 		nps3 = NPS.extract_html_data()
-		#tupl_state_list.append(nps3)
-		NPS_2 = NPS.sort_html_data()
 		state_info_list.append(nps3)
 	return state_info_list[0]
 a = NPS_extraction(national_parks_data)
-print(a)
+# print(a)
+
+
+def park_info_extraction(national_parks_data):
+	park_info_list = []
+	for elem in national_parks_data:
+		soup = BeautifulSoup(elem, "html.parser")
+		NPS2 = NationalPark(soup)
+		NPS_2 = NPS2.sort_html_data()
+		park_info_list.append(NPS_2)
+	return park_info_list[0]
+c = park_info_extraction(national_parks_data)
+print(c)
+
 
 #define a function to fetch data of the avg_temps
 # base url for https://www.currentresults.com/Weather/US/average-annual-state-temperatures.php
-def get_weather_data(a):	
-	weather_data = []
+def get_weather_data():	
 	unique_id = "weather"
 	if unique_id not in cache_dict:
 		baseurl = "https://www.currentresults.com/Weather/US/average-annual-state-temperatures.php"
 		r = requests.get(baseurl)
 		weather_doc = r.text
-		#print(weather_doc)
-		weather_data.append(weather_doc)
 		cache_dict[unique_id] = weather_doc
 		f = open(CACHE_F, 'w')
 		f.write(json.dumps(cache_dict))
@@ -216,35 +226,55 @@ def get_weather_data(a):
 		for elem in wh:
 			t = elem.find_all("td")
 			temps.append(t[1].string)
-		print(temps)
-		print(state_w)
-		a.append(temps)
-		print(a)
+		#print(temps)
+		#print(state_w)
+		#a.append(temps)
+		#print(a)
 		keys = state_w
 		values = temps
 		weather_dict = dict(zip(keys, values))
-		print(weather_dict)
-	
-		#cache_dict[weather] = weather_data
-		#f = open(CACHE_F, 'w')
-		#f.write(json.dumps(cache_dict))
-		#f.close()
-	#else:
-		#state_info = cache_dict[state_abv]
-		#print(type(state_info))
-		#html_data.append(state_info)
-	return weather_data
-national_weather_data = get_weather_data(a)
+		#print(weather_dict)
+	return weather_dict
+national_weather_data = get_weather_data()
+print(national_weather_data)
 
-# for obj in a:
-# 	for elem in obj:
-# 		statement = "INSERT OR IGNORE INTO States VALUES (?,?,?,?)"
-# 		cur.execute(statement, elem)
+
+
+b = [value for (key, value) in sorted(national_weather_data.items())]
+#print(b)
+a.append(b)
+#print(a)
+state = a[0]
+#print(state)
+counts = a[1]
+#print(counts)
+visitors = a[2]
+for elem in visitors:
+	if elem[0] == "$":
+		pos = visitors.index(elem)
+		visitors.remove(elem)
+		visitors.insert(pos, "N/A")
+#print(visitors)
+temp = a[3]
+#print(temp)
+
+
+state_information = zip(state, counts, visitors, temp)
+for elem in state_information:
+	statement = "INSERT OR IGNORE INTO States VALUES (?,?,?,?)"
+	cur.execute(statement, elem)
+
+# park = c[0]
+# description = c[1]
+# location = c[2]
+# typ = c[3]
+
 # load the data from the above sorting to the databases 
-#for u in state_info:
-#	statement = 'INSERT OR INGNORE INTO States VALUES (?,?,?,?)'
+# for u in state_info:
+# 	statement = 'INSERT OR INGNORE INTO States VALUES (?,?,?,?)'
 
 conn.commit()			
+
 # Put your tests here, with any edits you now need from when you turned them
 # in with your project plan.
 
