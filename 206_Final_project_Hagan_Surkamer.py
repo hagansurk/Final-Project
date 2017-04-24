@@ -52,7 +52,7 @@ except:
 # 
 def get_national_park_data():
 	html_data = []
-	state_list = ['al','ak','as','az','ar','ca','co','ct','de','dc','fl','ga','gu','hi','id','il','in','ia','ks','ky','la','me','md','ma','mi','mn','ms','mo','mt','ne','nv','nh','nj','nm','ny','nc','nd','mp','oh','ok','or','pa','pr','ri','sc','sd','tn','tx','ut','vt','vi','va','wa','wv','wi','wy']
+	state_list = ['al','ak','az','ar','ca','co','ct','de','fl','ga','hi','id','il','in','ia','ks','ky','la','me','md','ma','mi','mn','ms','mo','mt','ne','nv','nh','nj','nm','ny','nc','nd','oh','ok','or','pa','ri','sc','sd','tn','tx','ut','vt','va','wa','wv','wi','wy']
 	print(len(state_list))
 	for state_abv in state_list:
 		if state_abv not in cache_dict:
@@ -82,21 +82,7 @@ national_parks_data = get_national_park_data() # with no if statement, I am gett
 #print(cache_dict["co"]) # used to put into simple html reader online
 
 
-# define a function to fetch data of the avg_temps
-# base url for https://www.currentresults.com/Weather/US/average-annual-state-temperatures.php
-# def get_weather_data():
-# 	weather_data = []
-# 	if weather not in cache_dict:
-# 		baseurl = "https://www.currentresults.com/Weather/US/average-annual-state-temperatures.php"
-# 		r = requests.get(baseurl)
-# 		weather_doc = r.text
-# 		print(weather_doc)
-# 		weather_data = [weather_doc]
-# 		cache_dict[weather] = weather_data
-# 		f = open(CACHE_F, 'w')
-# 		f.write(json.dumps(cache_dict))
-# 		f.close()
-# national_weather_data = get_weather_data()
+# 
 # create National Parks Database with two different tables, Parks, States, and Articles 
 # Parks table with:
 # 	-Park name as Primary Key (containing a string of the park name)
@@ -165,8 +151,7 @@ cur.execute(table_spec2)
 class NationalPark():
 	state_name= []
 	park_count = []
-	park_visitors = []
-	avg_temp = [] 
+	park_visitors = [] 
 	def __init__(self, soup):
 		self.soup = soup
 	def extract_html_data(self):
@@ -179,23 +164,59 @@ class NationalPark():
 		self.park_visitors.append(self.count[1].string)
 		#print(self.park_visitors)
 		#print(self.park_count)
-		return self.state_name, self.park_count, self.park_visitors
+		return [self.state_name, self.park_count, self.park_visitors]
 	def sort_html_data(self):
-		self.state_info = zip(self.state_name, self.park_count, self.park_visitors, self.avg_temp)
-		return self.state_info # figure out how to return this as a list and not a zip oject
-
+		try:
+			self.state_info = [self.state_name, self.park_count, self.park_visitors]
+			return self.state_info 
+		except:
+			pass
 def NPS_extraction(national_parks_data):
-	tupl_state_list = []
+	state_info_list = []
 	for elem in national_parks_data:
 		soup = BeautifulSoup(elem, "html.parser")
 		NPS = NationalPark(soup)
 		nps3 = NPS.extract_html_data()
-		tupl_state_list.append(nps3)
+		#tupl_state_list.append(nps3)
 		NPS_2 = NPS.sort_html_data()
-		#print(nps3)
-	return tupl_state_list
+		state_info_list.append(nps3)
+	return state_info_list[0]
 a = NPS_extraction(national_parks_data)
 print(a)
+
+#define a function to fetch data of the avg_temps
+# base url for https://www.currentresults.com/Weather/US/average-annual-state-temperatures.php
+def get_weather_data(a):	
+	weather_data = []
+	
+	#if weather_data not in cache_dict:
+	baseurl = "https://www.currentresults.com/Weather/US/average-annual-state-temperatures.php"
+	r = requests.get(baseurl)
+	weather_doc = r.text
+	#print(weather_doc)
+	weather_data.append(weather_doc)
+	state_w =[]
+	soup = BeautifulSoup(weather_doc, "html.parser")
+	w = soup.find("div", {"class":"clearboth"})
+	#print(w)
+	w_state = w.find_all("a")
+	for elem in w_state:
+		state_w.append(elem.string)
+	temp = w.find_all('td')
+	print(temp)
+	print(state_w)
+
+		#cache_dict[weather] = weather_data
+		#f = open(CACHE_F, 'w')
+		#f.write(json.dumps(cache_dict))
+		#f.close()
+	#else:
+		#state_info = cache_dict[state_abv]
+		#print(type(state_info))
+		#html_data.append(state_info)
+	return weather_data
+national_weather_data = get_weather_data(a)
+
 # for obj in a:
 # 	for elem in obj:
 # 		statement = "INSERT OR IGNORE INTO States VALUES (?,?,?,?)"
