@@ -53,7 +53,7 @@ except:
 def get_national_park_data():
 	html_data = []
 	state_list = ['al','ak','az','ar','ca','co','ct','de','fl','ga','hi','id','il','in','ia','ks','ky','la','me','md','ma','mi','mn','ms','mo','mt','ne','nv','nh','nj','nm','ny','nc','nd','oh','ok','or','pa','ri','sc','sd','tn','tx','ut','vt','va','wa','wv','wi','wy']
-	print(len(state_list))
+	#print(len(state_list))
 	for state_abv in state_list:
 		if state_abv not in cache_dict:
 			baseurl = "https://www.nps.gov/state/" + state_abv + "/index.htm"
@@ -188,24 +188,43 @@ print(a)
 # base url for https://www.currentresults.com/Weather/US/average-annual-state-temperatures.php
 def get_weather_data(a):	
 	weather_data = []
+	unique_id = "weather"
+	if unique_id not in cache_dict:
+		baseurl = "https://www.currentresults.com/Weather/US/average-annual-state-temperatures.php"
+		r = requests.get(baseurl)
+		weather_doc = r.text
+		#print(weather_doc)
+		weather_data.append(weather_doc)
+		cache_dict[unique_id] = weather_doc
+		f = open(CACHE_F, 'w')
+		f.write(json.dumps(cache_dict))
+		f.close()
+	else:
+		weather_info = cache_dict[unique_id]
+		state_w =[]
+		temps = []
+		soup = BeautifulSoup(weather_info, "html.parser")
+		w = soup.find("div", {"class":"clearboth"})
+		#print(w)
+		w_state = w.find_all("a")
+		for elem in w_state:
+			state_w.append(elem.string)
+		wh = w.find_all("tr")
+		del wh[0]
+		del wh[17]
+		del wh[34]
+		for elem in wh:
+			t = elem.find_all("td")
+			temps.append(t[1].string)
+		print(temps)
+		print(state_w)
+		a.append(temps)
+		print(a)
+		keys = state_w
+		values = temps
+		weather_dict = dict(zip(keys, values))
+		print(weather_dict)
 	
-	#if weather_data not in cache_dict:
-	baseurl = "https://www.currentresults.com/Weather/US/average-annual-state-temperatures.php"
-	r = requests.get(baseurl)
-	weather_doc = r.text
-	#print(weather_doc)
-	weather_data.append(weather_doc)
-	state_w =[]
-	soup = BeautifulSoup(weather_doc, "html.parser")
-	w = soup.find("div", {"class":"clearboth"})
-	#print(w)
-	w_state = w.find_all("a")
-	for elem in w_state:
-		state_w.append(elem.string)
-	temp = w.find_all('td')
-	print(temp)
-	print(state_w)
-
 		#cache_dict[weather] = weather_data
 		#f = open(CACHE_F, 'w')
 		#f.write(json.dumps(cache_dict))
