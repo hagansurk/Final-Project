@@ -1,31 +1,3 @@
-###### INSTRUCTIONS
-
-# An outline for preparing your final project assignment is in this file.
-
-# Below, throughout this file, you should put comments that explain exactly
-# what you should do for each step of your project. You should specify
-# variable names and processes to use. For example, "Use dictionary
-# accumulation with the list you just created to create a dictionary called
-# tag_counts, where the keys represent tags on flickr photos and the values
-# represent frequency of times those tags occur in the list."
-
-# You can use second person ("You should...") or first person ("I will...") or
-# whatever is comfortable for you, as long as you are clear about what should
-# be done.
-
-# Some parts of the code should already be filled in when you turn this in: -
-# At least 1 function which gets and caches data from 1 of your data sources,
-# and an invocation of each of those functions to show that they work  - Tests
-# at the end of your file that accord with those instructions (will test that
-# you completed those instructions correctly!) - Code that creates a database
-# file and tables as your project plan explains, such that your program can be
-# run over and over again without error and without duplicate rows in your
-# tables. - At least enough code to load data into 1 of your dtabase tables
-# (this should accord with your instructions/tests)
-
-######### END INSTRUCTIONS #########
-
-# Put all import statements you need here.
 import unittest
 import collections
 import json
@@ -37,9 +9,8 @@ import sys
 import codecs
 
 sys.stdout = codecs.getwriter('utf-8')(sys.stdout.buffer)
-# Begin filling in instructions....
 
-# First I am going to have to create a cache file and set up a cacheing try and except clause
+
 CACHE_F = "NationalPark.json"
 try:
 	cache_file = open(CACHE_F, 'r')
@@ -48,8 +19,6 @@ try:
 except:
 	cache_dict = {}
 
-# Write a function to request data from the National Parks Service state site and save each HTML strings to a list
-# 
 def get_national_park_data():
 	html_data = []
 	state_list = ['al','ak','az','ar','ca','co','ct','de','fl','ga','hi','id','il','in','ia','ks','ky','la','me','md','ma','mi','mn','ms','mo','mt','ne','nv','nh','nj','nm','ny','nc','nd','oh','ok','or','pa','ri','sc','sd','tn','tx','ut','vt','va','wa','wv','wi','wy']
@@ -81,24 +50,6 @@ national_parks_data = get_national_park_data() # with no if statement, I am gett
 #print(national_parks_data)
 #print(cache_dict["co"]) # used to put into simple html reader online
 
-
-# 
-# create National Parks Database with two different tables, Parks, States, and Articles 
-# Parks table with:
-# 	-Park name as Primary Key (containing a string of the park name)
-# 	-State name from the State table (containing a string of the state name)
-# 	-Description of the park (containing a string from the description of the park)
-# 	-Sites and monuments (containing a string of the parks sites and monuments)
-# States table with:
-# 	-State name (containing a string of the state name)
-# 	-Number of parks in the state (containing an integer of the number of parks)
-# 	-Number of vistors of the park annually (containing an integer of the number of vistors)
-# 	-Avgerage Temperature in Fahrenheit (containing an integer of avgerage temp)
-# Articles table with:
-# 	-Article title (containing a string of the article title)
-# 	-Parks mentioned in the article (containing strings of the parks mentioned in the article)
-
-
 conn = sqlite3.connect('NationalParks.db')
 cur = conn.cursor()
 
@@ -125,10 +76,6 @@ table_spec2 += 'Articles (Article_title TEXT PRIMARY KEY, '
 table_spec2 += 'parks_mentioned TEXT)'
 cur.execute(table_spec2)
 
-# now that the database file and the tables have been created, begin to load data into the file
-# this can either be in the form of a class definition or just load just into one database file
-# 	TIP: make sure to sort through the data, extract the text from the html tags
-# 		Use BeautifulSoup to parse through the data 
 
 class NationalPark():
 	state_name= []
@@ -194,36 +141,8 @@ for html_string in national_parks_data:
 	park_dict_list.append(u)
 #print(v)
 	#print(u)
-print(park_dict_list)
-# def NPS_extraction(national_parks_data):
-# 	state_info_list = []
-# 	for elem in national_parks_data:
-# 		soup = BeautifulSoup(elem, "html.parser")
-# 		NPS = NationalPark(soup)
-# 		nps3 = NPS.extract_html_data()
-# 		state_info_list.append(nps3)
-# 	return state_info_list[0]
-# a = NPS_extraction(national_parks_data)
-# print(a)
+#print(park_dict_list)
 
-
-# def park_info_extraction(national_parks_data):
-# 	park_info_list = []
-# 	for elem in national_parks_data:
-# 		soup = BeautifulSoup(elem, "html.parser")
-# 		#print(soup)
-# 		NPS2 = NationalPark(soup)
-# 		NPS_2 = NPS2.sort_html_data()
-# 		#print(NPS_2)
-# 		park_info_list.append(NPS_2)
-# 		return park_info_list
-
-# c = park_info_extraction(national_parks_data)
-# print(c)
-
-
-#define a function to fetch data of the avg_temps
-# base url for https://www.currentresults.com/Weather/US/average-annual-state-temperatures.php
 def get_weather_data():	
 	unique_id = "weather"
 	if unique_id not in cache_dict:
@@ -261,7 +180,7 @@ def get_weather_data():
 		#print(weather_dict)
 	return weather_dict
 national_weather_data = get_weather_data()
-print(national_weather_data)
+#print(national_weather_data)
 
 
 
@@ -283,28 +202,39 @@ for elem in visitors:
 temp = v[3]
 #print(temp)
 
-
 state_information = zip(state, counts, visitors, temp)
 for elem in state_information:
+	#print(elem)
 	statement = "INSERT OR IGNORE INTO States VALUES (?,?,?,?)"
 	cur.execute(statement, elem)
+conn.commit()
 
-# park = c[0]
-# typ = c[1]
-# print(typ)
-# location = c[3]
-# print(location)
-# description = c[2]
-# print(description)
-# states = c[4]
-# park_information = zip(park, description, typ, location, states)
-# for elem in park_information:
-# 	statement = "INSERT OR IGNORE INTO Parks VALUES (?,?,?,?,?)"
-# 	cur.execute(statement, elem)
+for elem in park_dict_list:
+	keys = elem.keys()
+	keys2 = list(keys)
+	for i in keys:
+		keys2.append(i)
+	key = keys2.pop()
+	#print(keys2)
+	values = elem[key]
+	#print(values)
+	park_names = values[0]
+	#print(park_names)
+	park_type = values[1]
+	#print(park_type)
+	park_desc = values[2]
+	#print(park_desc)
+	park_loc = values[3]
+	#print(park_loc)
+	for el in park_names:
+		idx = park_names.index(el)
+		#print(idx)
+		park_tuples = (park_names[idx], park_desc[idx], park_type[idx], park_loc[idx], key)
+		statement = "INSERT OR IGNORE INTO Parks VALUES (?,?,?,?,?)"
+		cur.execute(statement, park_tuples)
 conn.commit()			
 
-# Put your tests here, with any edits you now need from when you turned them
-# in with your project plan.
+
 
 # class Test1(unittest.TestCase):
 # 	def test_cache(self):
