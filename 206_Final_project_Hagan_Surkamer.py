@@ -134,12 +134,9 @@ class NationalPark():
 	state_name= []
 	park_count = []
 	park_visitors = [] 
-	park_name = [] # tag h3
-	park_location = [] # tag h4
-	park_type = [] # tag h2
-	park_description = [] # tag p
-	def __init__(self, soup):
-		self.soup = soup
+	def __init__(self, html_string):
+		self.html_string = html_string
+		self.soup = BeautifulSoup(self.html_string, "html.parser")
 	def extract_html_data(self):
 		self.state = self.soup.find("h1",  {"class": "page-title"})
 		self.state_name.append(self.state.string)
@@ -152,49 +149,77 @@ class NationalPark():
 		#print(self.park_count)
 		return [self.state_name, self.park_count, self.park_visitors]
 	def sort_html_data(self):
-		self.park_info = self.soup.find("ul", {"id" : "list_parks"})
+		self.park_info_dict = {}
+		self.state_park_names = []
+		self.state_park_location = []
+		self.state_park_type = []
+		self.state_park_description = []
+		self.largest = self.soup.find("div", {"class" : "ColumnGrid row"})
+		self.states = self.largest.find("h1", {"class" : "page-title"})
+		self.keys = self.states.string
+		#print(self.keys)
+		self.park_info = self.largest.find("ul", {"id" : "list_parks"})
+		#print(type(self.park_info))
 		self.park = self.park_info.find_all("h3")
+		#print(self.park)
 		for elem in self.park:
-			self.park_name.append(elem.string)
+			self.name = elem.string
+			self.state_park_names.append(self.name)
+		#print(self.state_park_names)
 		self.type = self.park_info.find_all("h2")
 		for elem in self.type:
-			self.park_type.append(elem.string)
+			self.typ = elem.string
+			self.state_park_type.append(self.typ)
 		self.description = self.park_info.find_all("p")
 		for elem in self.description:
-			self.park_description.append(elem.string)
+			self.desc = elem.string
+			self.state_park_description.append(self.desc)
 		self.location = self.park_info.find_all("h4")
 		for elem in self.location:
-			self.park_location.append(elem.string)
+			self.loc = elem.string
+			self.state_park_location.append(self.loc)
+		self.park_info_dict[self.keys] = [self.state_park_names, self.state_park_type, self.state_park_description, self.state_park_location]
 		# print(self.park_type)
 		# print(self.park_name)
 		# print(self.park_description)
 		# print(self.park_location)
-		return [self.park_name, self.park_type, self.park_description, self.park_location]
-		
+		return self.park_info_dict
+		#[self.park_name, self.park_type, self.park_description, self.park_location] #, self.park_state]
 
-
-def NPS_extraction(national_parks_data):
-	state_info_list = []
-	for elem in national_parks_data:
-		soup = BeautifulSoup(elem, "html.parser")
-		NPS = NationalPark(soup)
-		nps3 = NPS.extract_html_data()
-		state_info_list.append(nps3)
-	return state_info_list[0]
-a = NPS_extraction(national_parks_data)
+park_dict_list = []		
+for html_string in national_parks_data:
+	NPS = NationalPark(html_string)
+	v = NPS.extract_html_data()
+	u = NPS.sort_html_data()
+	park_dict_list.append(u)
+#print(v)
+	#print(u)
+print(park_dict_list)
+# def NPS_extraction(national_parks_data):
+# 	state_info_list = []
+# 	for elem in national_parks_data:
+# 		soup = BeautifulSoup(elem, "html.parser")
+# 		NPS = NationalPark(soup)
+# 		nps3 = NPS.extract_html_data()
+# 		state_info_list.append(nps3)
+# 	return state_info_list[0]
+# a = NPS_extraction(national_parks_data)
 # print(a)
 
 
-def park_info_extraction(national_parks_data):
-	park_info_list = []
-	for elem in national_parks_data:
-		soup = BeautifulSoup(elem, "html.parser")
-		NPS2 = NationalPark(soup)
-		NPS_2 = NPS2.sort_html_data()
-		park_info_list.append(NPS_2)
-	return park_info_list[0]
-c = park_info_extraction(national_parks_data)
-print(c)
+# def park_info_extraction(national_parks_data):
+# 	park_info_list = []
+# 	for elem in national_parks_data:
+# 		soup = BeautifulSoup(elem, "html.parser")
+# 		#print(soup)
+# 		NPS2 = NationalPark(soup)
+# 		NPS_2 = NPS2.sort_html_data()
+# 		#print(NPS_2)
+# 		park_info_list.append(NPS_2)
+# 		return park_info_list
+
+# c = park_info_extraction(national_parks_data)
+# print(c)
 
 
 #define a function to fetch data of the avg_temps
@@ -242,20 +267,20 @@ print(national_weather_data)
 
 b = [value for (key, value) in sorted(national_weather_data.items())]
 #print(b)
-a.append(b)
+v.append(b)
 #print(a)
-state = a[0]
+state = v[0]
 #print(state)
-counts = a[1]
+counts = v[1]
 #print(counts)
-visitors = a[2]
+visitors = v[2]
 for elem in visitors:
 	if elem[0] == "$":
 		pos = visitors.index(elem)
 		visitors.remove(elem)
 		visitors.insert(pos, "N/A")
 #print(visitors)
-temp = a[3]
+temp = v[3]
 #print(temp)
 
 
@@ -265,14 +290,17 @@ for elem in state_information:
 	cur.execute(statement, elem)
 
 # park = c[0]
-# description = c[1]
-# location = c[2]
-# typ = c[3]
-
-# load the data from the above sorting to the databases 
-# for u in state_info:
-# 	statement = 'INSERT OR INGNORE INTO States VALUES (?,?,?,?)'
-
+# typ = c[1]
+# print(typ)
+# location = c[3]
+# print(location)
+# description = c[2]
+# print(description)
+# states = c[4]
+# park_information = zip(park, description, typ, location, states)
+# for elem in park_information:
+# 	statement = "INSERT OR IGNORE INTO Parks VALUES (?,?,?,?,?)"
+# 	cur.execute(statement, elem)
 conn.commit()			
 
 # Put your tests here, with any edits you now need from when you turned them
