@@ -38,6 +38,7 @@ def get_national_park_data():
 			f = open(CACHE_F, 'w')
 			f.write(json.dumps(cache_dict))
 			f.close()
+			return cache_dict[state_abv]
 		else:
 			state_info = cache_dict[state_abv]
 			#print(type(state_info))
@@ -49,6 +50,56 @@ national_parks_data = get_national_park_data() # with no if statement, I am gett
 #json file has output of all 53 sites 
 #print(national_parks_data)
 #print(cache_dict["co"]) # used to put into simple html reader online
+
+def get_NPS_article_data():
+	NPS_article_data = []
+	url_list = []
+	art_html_list = []
+	html_data = []
+	if "NPS_article_info" not in cache_dict:
+		baseurl = "https://home.nps.gov/index.htm"
+		r = requests.get(baseurl)
+		html_document = r.text
+		soup = BeautifulSoup(html_document, "html.parser")
+		url_add_on = soup.find_all("div", {"class" : "Component Feature -small"})
+		baseurl1 = "https://www.nps.gov"
+		html_data.append(html_document)
+		NPS_article_data.append(html_document)
+		#print(html_document)
+		href_list = []
+		for elem in url_add_on:
+			href_tag = elem.find("a")['href']
+			#print(href_tag)
+			href_list.append(href_tag)
+		#print(href_list)
+		for elem in href_list:
+			url = baseurl1 + elem
+			url_list.append(url)
+		#print(url_list)
+		for elem in url_list:
+			r1 = requests.get(elem)
+			art_html = r1.text
+			#print(art_html)
+		
+			#print(html_data)
+			NPS_article_data.append(art_html)
+		cache_dict["NPS_article_info"] = NPS_article_data
+		f = open(CACHE_F, 'w')
+		f.write(json.dumps(cache_dict))
+		f.close()
+		return cache_dict["NPS_article_info"]
+	else:
+		article_info = cache_dict["NPS_article_info"]
+		# NPS_article_data.append(article_info)
+		return article_info
+article_data = get_NPS_article_data()
+# print(article_data)
+# print(type(article_data))
+# print(len(article_data))
+# #print(article_data[0])
+# #print(article_data[1])
+# print(type(article_data[4]))
+
 
 conn = sqlite3.connect('NationalParks.db')
 cur = conn.cursor()
@@ -73,11 +124,11 @@ cur.execute('DROP TABLE IF EXISTS Articles')
 
 table_spec2 = 'CREATE TABLE IF NOT EXISTS '
 table_spec2 += 'Articles (Article_title TEXT PRIMARY KEY, '
-table_spec2 += 'parks_mentioned TEXT)'
+table_spec2 += 'article_text TEXT)'
 cur.execute(table_spec2)
 
 
-class NationalPark():
+class NationalPark(object):
 	state_name= []
 	park_count = []
 	park_visitors = [] 
@@ -86,6 +137,7 @@ class NationalPark():
 		self.soup = BeautifulSoup(self.html_string, "html.parser")
 	def extract_html_data(self):
 		self.state = self.soup.find("h1",  {"class": "page-title"})
+		#print(self.state)
 		self.state_name.append(self.state.string)
 		#print(self.state_name)
 		self.park_numbers = self.soup.find("ul", {'class':"state_numbers"})
@@ -133,13 +185,119 @@ class NationalPark():
 		return self.park_info_dict
 		#[self.park_name, self.park_type, self.park_description, self.park_location] #, self.park_state]
 
+class Article(object):
+	def __init__(self, html_string):
+		self.html_string = html_string
+		self.soup = BeautifulSoup(self.html_string, "html.parser")
+		self.info = self.soup.find_all("div", {"class":"Component Feature -medium"})
+		
+		self.info3 = self.soup.find("div", {"class" : "Component text-content-size text-content-style"})
+		#print(type(self.info3))
+		#print(self.info3)
+	def extract_titles(self):
+		self.title_list = []
+		#self.title_list1 =[]
+		try:
+			for elem in self.info:
+				self.title = elem.find_all("h3", {"class" : "Feature-title carrot-end"})
+			
+				for t in self.title:
+					self.title_list.append(t.string)
+		
+		
+			self.info2 = self.soup.find("div", {"class" : "ColumnGrid row"})
+			self.article_title1 = self.info2.find_all("h1")
+			#print(self.article_title1)
+			for title in self.article_title1:
+				self.title_list.append(title.string)
+			#print(self.title_list)
+		except:
+			pass
+		return self.title_list
+	def extract_text(self):
+		self.text_list = []
+		try:
+			self.text = self.info3.find_all("p")
+			#print(self.text)
+			for elem in self.text:
+				self.text_list.append(elem.text)
+			#print(text_list)
+
+		except:
+			self.info4 = self.soup.find_all("div", {"class":"Component text-content-size text-content-style ArticleTextGroup clearfix"})
+			#print(type(self.info4))
+			for elem in self.info4:
+				self.text = elem.find_all("p")
+				for elem in self.text:
+					self.text_list.append(elem.text)
+		return self.text_list
+	def extract_desc(self):
+		self.desc_list = []
+		try:
+			for page in self.info:
+				self.desc = page.find("p")#, {"class" : "Feature-description"})
+				#print(self.desc)
+				#for d in self.desc:
+					# d = self.desc.find_all("p")
+					# for de in d:
+				self.desc_list.append(self.desc.text)
+			#print(self.desc_list)
+		except:
+			pass
+		return self.desc_list
+title_list = []
+text_list = []
+desc_list = []
+for html_string in article_data:
+	article = Article(html_string)
+	h = article.extract_titles()
+	title_list.append(h)
+	g = article.extract_text()
+	text_list.append(g)
+	d = article.extract_desc()
+	desc_list.append(d)
+
+for elem in text_list:
+	if len(elem) == 0:
+		elem.append("No text on page")
+yt = title_list[1]
+y = title_list[1][-1]
+#print(y)
+title_list.remove(yt)
+title_list.insert(1,[y])
+desc_list1 = desc_list[0]
+a = text_list[0]
+text_list.remove(a)
+text_list.insert(0, desc_list1)
+
+k = title_list[0]
+title_list.remove(k)
+title1 = [k[0]]
+title2 = [k[1]]
+title_list.insert(0, title1)
+title_list.insert(1, title2)
+j = text_list[0]
+text_list.remove(j)
+text1 = [j[0]]
+text2 = [j[1]]
+text_list.insert(0, text1)
+text_list.insert(1,text2)
+print(desc_list1)
+print(title_list)
+#print(type(title_list))
+print(text_list)
+	# print(g)
+title_list1 = []
+for elem in title_list:
+	title_list1.append(elem[0])
+print(title_list1)
 park_dict_list = []		
 for html_string in national_parks_data:
 	NPS = NationalPark(html_string)
 	v = NPS.extract_html_data()
 	u = NPS.sort_html_data()
 	park_dict_list.append(u)
-#print(v)
+# #print(v)
 	#print(u)
 #print(park_dict_list)
 
@@ -153,6 +311,7 @@ def get_weather_data():
 		f = open(CACHE_F, 'w')
 		f.write(json.dumps(cache_dict))
 		f.close()
+		return cache_dict[unique_id]
 	else:
 		weather_info = cache_dict[unique_id]
 		state_w =[]
@@ -232,10 +391,39 @@ for elem in park_dict_list:
 		park_tuples = (park_names[idx], park_desc[idx], park_type[idx], park_loc[idx], key)
 		statement = "INSERT OR IGNORE INTO Parks VALUES (?,?,?,?,?)"
 		cur.execute(statement, park_tuples)
-conn.commit()			
+conn.commit()
+
+text_str_list = []	
+text_stri = " ;"		
+title_list_2 = []
+for elem in text_list:
+	a = text_stri.join(elem)
+	text_str_list.append(a)
 
 
+article_db = zip(title_list1,text_str_list)
+for elem in article_db:
+	print(elem)
+	statement = "INSERT OR IGNORE INTO Articles VALUES (?,?)"
+	cur.execute(statement, elem)
+conn.commit()
 
+#Task three: create queries 
+
+q1 = 'SELECT state_name FROM States WHERE park_count >= 20'
+cur.execute(q1)
+most_parks = cur.fetchall()
+print(most_parks)
+
+q2 = 'SELECT States.state_name, Parks.park_name FROM Parks INNER JOIN States on Parks.state_name = States.state_name'
+cur.execute(q2)
+joined_results = cur.fetchall()
+print(joined_results)
+
+q3 = "SELECT States.state_name, Parks.park_name, Parks.type_of_park, Parks.description FROM Parks INNER JOIN States on Parks.state_name = States.state_name WHERE States.park_visitors >= 10000000" #use inner join to create a query of parks, desc, type, and location for the top five visited states
+cur.execute(q3)
+most_visited_parks = cur.fetchall()
+print(most_visited_parks)
 # class Test1(unittest.TestCase):
 # 	def test_cache(self):
 # 		file1 = open("NPS_cache.json", 'r').read()
