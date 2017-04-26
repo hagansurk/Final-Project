@@ -1,16 +1,17 @@
 import unittest
 import collections
 import json
+import re
 from bs4 import BeautifulSoup
 import itertools
 import sqlite3
 import requests
 import sys
 import codecs
-
+import io
 sys.stdout = codecs.getwriter('utf-8')(sys.stdout.buffer)
 
-
+results_file = "results.txt"
 CACHE_F = "NationalPark.json"
 try:
 	cache_file = open(CACHE_F, 'r')
@@ -94,7 +95,7 @@ def get_NPS_article_data():
 		return article_info
 article_data = get_NPS_article_data()
 # print(article_data)
-# print(type(article_data))
+#print(type(article_data))
 # print(len(article_data))
 # #print(article_data[0])
 # #print(article_data[1])
@@ -282,15 +283,15 @@ text1 = [j[0]]
 text2 = [j[1]]
 text_list.insert(0, text1)
 text_list.insert(1,text2)
-print(desc_list1)
-print(title_list)
-#print(type(title_list))
-print(text_list)
+# print(desc_list1)
+# print(title_list)
+# #print(type(title_list))
+# print(text_list)
 	# print(g)
 title_list1 = []
 for elem in title_list:
 	title_list1.append(elem[0])
-print(title_list1)
+#print(title_list1)
 park_dict_list = []		
 for html_string in national_parks_data:
 	NPS = NationalPark(html_string)
@@ -350,18 +351,24 @@ v.append(b)
 state = v[0]
 #print(state)
 counts = v[1]
+
 #print(counts)
+vt = []
 visitors = v[2]
-for elem in visitors:
-	if elem[0] == "$":
-		pos = visitors.index(elem)
-		visitors.remove(elem)
-		visitors.insert(pos, "N/A")
 #print(visitors)
+for elem in visitors:
+	elem = re.sub('[,]','',elem)
+	vt.append(elem)
+for elem in vt:	
+	if elem[0]  == "$":
+		pos = vt.index(elem)
+		vt.remove(elem)
+		vt.insert(pos, "N/A")
+#print(vt)
 temp = v[3]
 #print(temp)
 
-state_information = zip(state, counts, visitors, temp)
+state_information = zip(state, counts, vt, temp)
 for elem in state_information:
 	#print(elem)
 	statement = "INSERT OR IGNORE INTO States VALUES (?,?,?,?)"
@@ -403,54 +410,108 @@ for elem in text_list:
 
 article_db = zip(title_list1,text_str_list)
 for elem in article_db:
-	print(elem)
+	#print(elem)
 	statement = "INSERT OR IGNORE INTO Articles VALUES (?,?)"
 	cur.execute(statement, elem)
 conn.commit()
 
 #Task three: create queries 
 
-q1 = 'SELECT state_name FROM States WHERE park_count >= 20'
+q1 = 'SELECT state_name, park_count FROM States WHERE park_count >= 20'
 cur.execute(q1)
 most_parks = cur.fetchall()
-print(most_parks)
+#print(most_parks)
 
-q2 = 'SELECT States.state_name, Parks.park_name FROM Parks INNER JOIN States on Parks.state_name = States.state_name'
+q2 = 'SELECT States.state_name, Parks.park_name, States.park_visitors FROM Parks INNER JOIN States on Parks.state_name = States.state_name WHERE States.park_visitors >= 2000000'
 cur.execute(q2)
 joined_results = cur.fetchall()
-print(joined_results)
+#print(joined_results)
 
-q3 = "SELECT States.state_name, Parks.park_name, Parks.type_of_park, Parks.description FROM Parks INNER JOIN States on Parks.state_name = States.state_name WHERE States.park_visitors >= 10000000" #use inner join to create a query of parks, desc, type, and location for the top five visited states
+q3 = "SELECT States.state_name, Parks.park_name, Parks.park_location, Parks.description, States.avg_temp FROM Parks INNER JOIN States on Parks.state_name = States.state_name WHERE States.avg_temp >= 63" #use inner join to create a query of parks, desc, type, and location for the top five visited states
 cur.execute(q3)
 most_visited_parks = cur.fetchall()
-print(most_visited_parks)
-# class Test1(unittest.TestCase):
-# 	def test_cache(self):
-# 		file1 = open("NPS_cache.json", 'r').read()
-# 		self.assertTrue("wy" in file1, "Testing that the state_abv made into the json cache file")
-# 	def test_html_str(self):
-# 		html_string = NationalParks.fetch_htm_data()
-# 		self.assertEqual(type(html_string), type(""))
-# 	def test_database(self):
-# 		conn = sqlite3.connect('NationalParks.db')
-# 		cur = conn.cursor()
-# 		cur.execute('SELECT * FROM Parks')
-# 		output = cur.fetchall()
-# 		self.assertTrue(len(output[1])==4, "Testing that Parks table has 4 colums for park name, state, description, and sites")
-# 	def test_national_park_headline(self):
-# 		self.assertEqual(type(national_park_headline), type(""), 'Testing that the article title of each atricle found is a string')
-# 	def test_query(self):
-# 		conn = sqlite3.connect('NationalParks.db')
-# 		cur = conn.cursor()
-# 		cur.execute('SELECT abbrv FROM STATE')
-# 		state_abbrv_list = cur.fetchall()
-# 		self.assertEqual(type(state_abbrv_list), type([]), "Testing that the list made in query creating a list of states is a list")
-# 	def test_park_diction(self):
-# 		self.assertEqual(type(park_diction), type({"park":["state", "monuments"]}), "Testing that the park_diction made using collection is a dictionary")
-# 		self.assertEqual(type(park_diction.keys()), type([]), "Testing that the park_diction using the dot keys method returns a list of the park names")
-# 	def test_states_diction(self):
-# 		self.assertEqual(type(states_diction[0]), type("State abbrv"), "Testing that the first element of the states_diction is a string of the state abbrv")	
-# ## Remember to invoke all your tests...
-# if __name__ == "__main__":
-# 	unittest.main(verbosity=2)
+#print(len(most_visited_parks))
+
+q4 = "SELECT article_text FROM Articles"
+cur.execute(q4)
+article_db_info = cur.fetchall()
+list_article_data = [x[0] for x in article_db_info]
+#print(list_article_data)
+
+q5 = "SELECT state_name, park_visitors FROM States WHERE park_visitors >= 10000000"
+cur.execute(q5)
+most_visitors = cur.fetchall()
+#print(most_visitors)
+
+q6 = "SELECT park_name, park_location FROM Parks"
+cur.execute(q6)
+park_data = cur.fetchall()
+#print(park_data)
+
+q7 = "SELECT Article_title, article_text FROM Articles"
+cur.execute(q4)
+article_info = cur.fetchall()
+#print(article_info)
+
+
+# now manipulate the data
+word_lst = []
+for line in list_article_data:
+	wrds = line.split()
+	for word in wrds:
+		word_lst.append(word)
+#print(word_lst)
+
+out_put = []
+for elem in most_visited_parks:
+	most_visited_output = "\n\n\nPark name: {}\nPark Location: {}\nState: {}\nPark Description: {}\nAverage State Temperatrue: {}\n\n\n\n\n".format(elem[1], elem[2], elem[0], elem[3], elem[4])
+	out_put.append(most_visited_output)
+#len(out_put)	
+
+with io.open(results_file, 'w', encoding="utf-8") as r_file:
+	r_file.write("Results for most popular parks:\n")
+	for elem in out_put:
+		r_file.write(elem)
+	r_file.close()
+
+
+class Test1(unittest.TestCase):
+	def test_cache(self):
+		cache_d = cache_dict
+		self.assertTrue("wy" in cache_d.keys(), "Testing that the state_abv made into the json cache file")
+	def test_html_str(self):
+		html_data = get_national_park_data()
+		html_string = html_data[0]
+		self.assertEqual(type(html_string), type(""))
+		html_data2 = get_NPS_article_data()
+		html_string2 = html_data2[0]
+		self.assertEqual(type(html_string2), type(""))
+	def test_database(self):
+		conn = sqlite3.connect('NationalParks.db')
+		cur = conn.cursor()
+		cur.execute('SELECT * FROM Parks')
+		output = cur.fetchall()
+		self.assertTrue(len(output[1])==5, "Testing that Parks table has 5 colums for park name, state, description, location, and type")
+	def test_national_park_headline(self):
+		self.assertEqual(type(article_data[0]), type(""), 'Testing that the article title of each atricle found is a string')
+	def test_query(self):
+		conn = sqlite3.connect('NationalParks.db')
+		cur = conn.cursor()
+		cur.execute('SELECT state_name FROM States')
+		statename_list = cur.fetchall()
+		self.assertEqual(type(statename_list), type([]), "Testing that the list made in query creating a list of states is a list")
+	def test_weather_diction(self):
+		weather_diction = get_weather_data()
+		self.assertEqual(type(weather_diction), type({"State name": "avgerage state temp"}), "Testing that the weather_diction returned in get weather data made using dict zip is a dictionary")
+		self.assertEqual(sorted(list(weather_diction.keys())), ['Alabama', 'Alaska', 'Arizona', 'Arkansas', 'California', 'Colorado', 'Connecticut', 'Delaware', 'Florida', 'Georgia', 'Hawaii', 'Idaho', 'Illinois', 'Indiana', 'Iowa', 'Kansas', 'Kentucky', 'Louisiana', 'Maine', 'Maryland', 'Massachusetts', 'Michigan', 'Minnesota', 'Mississippi', 'Missouri', 'Montana', 'Nebraska', 'Nevada', 'New Hampshire', 'New Jersey', 'New Mexico', 'New York', 'North Carolina', 'North Dakota', 'Ohio', 'Oklahoma', 'Oregon', 'Pennsylvania', 'Rhode Island', 'South Carolina', 'South Dakota', 'Tennessee', 'Texas', 'Utah', 'Vermont', 'Virginia', 'Washington', 'West Virginia', 'Wisconsin', 'Wyoming']
+, "Testing that the weather_dict using the dot keys method returns the same list as the list of states from the National Parks site")
+	def test_state_park_amount(self):
+		conn = sqlite3.connect('NationalParks.db')
+		cur = conn.cursor()
+		cur.execute("SELECT state_name, park_count FROM States WHERE park_count >= 20")
+		output = cur.fetchall()
+		self.assertEqual(len(output), 5, "Testing that the query and databases are loaded correctly so that only 5 states are returned when minimum park limit is set at 20")	
+
+if __name__ == "__main__":
+	unittest.main(verbosity=2)
 
