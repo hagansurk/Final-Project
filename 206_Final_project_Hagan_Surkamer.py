@@ -11,7 +11,6 @@ import codecs
 import io
 sys.stdout = codecs.getwriter('utf-8')(sys.stdout.buffer)
 
-results_file = "results.txt"
 CACHE_F = "NationalPark.json"
 try:
 	cache_file = open(CACHE_F, 'r')
@@ -20,10 +19,12 @@ try:
 except:
 	cache_dict = {}
 
+html_data = []
 def get_national_park_data():
-	html_data = []
-	state_list = ['al','ak','az','ar','ca','co','ct','de','fl','ga','hi','id','il','in','ia','ks','ky','la','me','md','ma','mi','mn','ms','mo','mt','ne','nv','nh','nj','nm','ny','nc','nd','oh','ok','or','pa','ri','sc','sd','tn','tx','ut','vt','va','wa','wv','wi','wy']
+	
 	#print(len(state_list))
+	state_list = ['al','ak','az','ar','ca','co','ct','de','fl','ga','hi','id','il','in','ia','ks','ky','la','me','md','ma','mi','mn','ms','mo','mt','ne','nv','nh','nj','nm','ny','nc','nd','oh','ok','or','pa','ri','sc','sd','tn','tx','ut','vt','va','wa','wv','wi','wy']
+
 	for state_abv in state_list:
 		if state_abv not in cache_dict:
 			baseurl = "https://www.nps.gov/state/" + state_abv + "/index.htm"
@@ -36,17 +37,20 @@ def get_national_park_data():
 			#state_page = soup.find_all("div", {"class": "ContentHeader"}) #used to check if it got info from each state
 			#print(state_page.text)
 			cache_dict[state_abv] = html_document
+			#print(cache_dict.keys())
 			f = open(CACHE_F, 'w')
 			f.write(json.dumps(cache_dict))
 			f.close()
-			return cache_dict[state_abv]
+			
 		else:
 			state_info = cache_dict[state_abv]
+			#print(cache_dict.keys())
 			#print(type(state_info))
 			html_data.append(state_info)
 	return html_data
 
-national_parks_data = get_national_park_data() # with no if statement, I am getting output of all 53 html strings, but when I add it, I am only getting one sites html string and am confused as to why
+
+national_parks_data = get_national_park_data() 
 #print(type(national_parks_data))
 #json file has output of all 53 sites 
 #print(national_parks_data)
@@ -83,7 +87,7 @@ def get_NPS_article_data():
 			#print(art_html)
 		
 			#print(html_data)
-			NPS_article_data.append(art_html)
+		NPS_article_data.append(art_html)
 		cache_dict["NPS_article_info"] = NPS_article_data
 		f = open(CACHE_F, 'w')
 		f.write(json.dumps(cache_dict))
@@ -92,7 +96,7 @@ def get_NPS_article_data():
 	else:
 		article_info = cache_dict["NPS_article_info"]
 		# NPS_article_data.append(article_info)
-		return article_info
+	return article_info
 article_data = get_NPS_article_data()
 # print(article_data)
 #print(type(article_data))
@@ -186,6 +190,14 @@ class NationalPark(object):
 		return self.park_info_dict
 		#[self.park_name, self.park_type, self.park_description, self.park_location] #, self.park_state]
 
+
+park_dict_list = []	
+for html_string in national_parks_data:
+	NPS = NationalPark(html_string)
+	v = NPS.extract_html_data()
+	u = NPS.sort_html_data()
+	park_dict_list.append(u)
+
 class Article(object):
 	def __init__(self, html_string):
 		self.html_string = html_string
@@ -201,11 +213,8 @@ class Article(object):
 		try:
 			for elem in self.info:
 				self.title = elem.find_all("h3", {"class" : "Feature-title carrot-end"})
-			
 				for t in self.title:
 					self.title_list.append(t.string)
-		
-		
 			self.info2 = self.soup.find("div", {"class" : "ColumnGrid row"})
 			self.article_title1 = self.info2.find_all("h1")
 			#print(self.article_title1)
@@ -246,6 +255,8 @@ class Article(object):
 		except:
 			pass
 		return self.desc_list
+
+
 title_list = []
 text_list = []
 desc_list = []
@@ -261,6 +272,7 @@ for html_string in article_data:
 for elem in text_list:
 	if len(elem) == 0:
 		elem.append("No text on page")
+#print(title_list)
 yt = title_list[1]
 y = title_list[1][-1]
 #print(y)
@@ -292,12 +304,7 @@ title_list1 = []
 for elem in title_list:
 	title_list1.append(elem[0])
 #print(title_list1)
-park_dict_list = []		
-for html_string in national_parks_data:
-	NPS = NationalPark(html_string)
-	v = NPS.extract_html_data()
-	u = NPS.sort_html_data()
-	park_dict_list.append(u)
+
 # #print(v)
 	#print(u)
 #print(park_dict_list)
@@ -308,16 +315,9 @@ def get_weather_data():
 		baseurl = "https://www.currentresults.com/Weather/US/average-annual-state-temperatures.php"
 		r = requests.get(baseurl)
 		weather_doc = r.text
-		cache_dict[unique_id] = weather_doc
-		f = open(CACHE_F, 'w')
-		f.write(json.dumps(cache_dict))
-		f.close()
-		return cache_dict[unique_id]
-	else:
-		weather_info = cache_dict[unique_id]
 		state_w =[]
 		temps = []
-		soup = BeautifulSoup(weather_info, "html.parser")
+		soup = BeautifulSoup(weather_doc, "html.parser")
 		w = soup.find("div", {"class":"clearboth"})
 		#print(w)
 		w_state = w.find_all("a")
@@ -337,6 +337,35 @@ def get_weather_data():
 		keys = state_w
 		values = temps
 		weather_dict = dict(zip(keys, values))
+		cache_dict[unique_id] = weather_dict
+		f = open(CACHE_F, 'w')
+		f.write(json.dumps(cache_dict))
+		f.close()
+		return cache_dict[unique_id]
+	else:
+		weather_dict = cache_dict[unique_id]
+		# state_w =[]
+		# temps = []
+		# soup = BeautifulSoup(weather_info, "html.parser")
+		# w = soup.find("div", {"class":"clearboth"})
+		# #print(w)
+		# w_state = w.find_all("a")
+		# for elem in w_state:
+		# 	state_w.append(elem.string)
+		# wh = w.find_all("tr")
+		# del wh[0]
+		# del wh[17]
+		# del wh[34]
+		# for elem in wh:
+		# 	t = elem.find_all("td")
+		# 	temps.append(t[1].string)
+		# #print(temps)
+		# #print(state_w)
+		# #a.append(temps)
+		# #print(a)
+		# keys = state_w
+		# values = temps
+		# weather_dict = dict(zip(keys, values))
 		#print(weather_dict)
 	return weather_dict
 national_weather_data = get_weather_data()
@@ -467,6 +496,8 @@ for elem in most_visited_parks:
 	most_visited_output = "\n\n\nPark name: {}\nPark Location: {}\nState: {}\nPark Description: {}\nAverage State Temperatrue: {}\n\n\n\n\n".format(elem[1], elem[2], elem[0], elem[3], elem[4])
 	out_put.append(most_visited_output)
 #len(out_put)	
+
+results_file = "results.txt"
 
 with io.open(results_file, 'w', encoding="utf-8") as r_file:
 	r_file.write("Results for most popular parks:\n")
